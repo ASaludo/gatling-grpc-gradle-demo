@@ -1,0 +1,121 @@
+syntax = "proto3";
+
+package authzed.api.v1;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+
+service PermissionsService {
+  rpc CheckPermission (CheckPermissionRequest)
+    returns (CheckPermissionResponse);
+}
+
+message ObjectReference {
+  string object_type = 1;
+  string object_id = 2;
+}
+
+message SubjectReference {
+  ObjectReference object = 1;
+  string optional_relation = 2;
+}
+
+message ZedToken {
+  string token = 1;
+}
+
+message CheckPermissionRequest {
+  Consistency consistency = 1;
+  ObjectReference resource = 2;
+  string permission = 3;
+  SubjectReference subject = 4;
+  google.protobuf.Struct context = 5;
+  bool with_tracing = 6;
+
+  message Consistency {
+
+    oneof requirement {
+      bool minimize_latency = 1;
+      ZedToken at_least_as_fresh = 2;
+      ZedToken at_exact_snapshot = 3;
+      bool fully_consistent = 4;
+    }
+
+
+  }
+
+
+
+
+}
+
+message CheckPermissionResponse {
+  ZedToken checked_at = 1;
+  Permissionship permissionship = 2;
+  PartialCaveatInfo partial_caveat_info = 3;
+  DebugInformation debug_trace = 4;
+
+  enum Permissionship {
+    PERMISSIONSHIP_UNSPECIFIED = 0;
+    PERMISSIONSHIP_NO_PERMISSION = 1;
+    PERMISSIONSHIP_HAS_PERMISSION = 2;
+    PERMISSIONSHIP_CONDITIONAL_PERMISSION = 3;
+  }
+
+  message PartialCaveatInfo {
+    repeated string missing_required_context = 1;
+  }
+
+  message DebugInformation {
+    CheckDebugTrace check = 1;
+    string schema_used = 2;
+
+    message CheckDebugTrace {
+      ObjectReference resource = 1;
+      string permission = 2;
+      PermissionType permission_type = 3;
+      SubjectReference subject = 4;
+      Permissionship result = 5;
+      CaveatEvalInfo caveat_evaluation_info = 8;
+      google.protobuf.Duration duration = 9;
+
+      oneof resolution {
+        bool was_cached_result = 6;
+        SubProblems sub_problems = 7;
+      }
+
+      enum PermissionType {
+        PERMISSION_TYPE_UNSPECIFIED = 0;
+        PERMISSION_TYPE_RELATION = 1;
+        PERMISSION_TYPE_PERMISSION = 2;
+      }
+
+      enum Permissionship {
+        PERMISSIONSHIP_UNSPECIFIED = 0;
+        PERMISSIONSHIP_NO_PERMISSION = 1;
+        PERMISSIONSHIP_HAS_PERMISSION = 2;
+        PERMISSIONSHIP_CONDITIONAL_PERMISSION = 3;
+      }
+
+      message CaveatEvalInfo {
+        string expression = 1;
+        Result result = 2;
+        google.protobuf.Struct context = 3;
+        PartialCaveatInfo partial_caveat_info = 4;
+        string caveat_name = 5;
+
+        enum Result {
+          RESULT_UNSPECIFIED = 0;
+          RESULT_UNEVALUATED = 1;
+          RESULT_FALSE = 2;
+          RESULT_TRUE = 3;
+          RESULT_MISSING_SOME_CONTEXT = 4;
+        }
+      }
+
+      message SubProblems {
+        repeated CheckDebugTrace traces = 1;
+      }
+    }
+  }
+}

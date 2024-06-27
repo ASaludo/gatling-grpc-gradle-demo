@@ -28,7 +28,8 @@ dependencies {
     add("io.grpc:grpc-stub:1.53.0")
 
     implementation("javax.annotation:javax.annotation-api:1.3.2")
-
+    // https://mvnrepository.com/artifact/build.buf.protoc-gen-validate/pgv-java-stub
+    implementation("build.buf.protoc-gen-validate:pgv-java-stub:1.0.2")
     gatling("com.github.phisgr:gatling-grpc:0.16.0")
     // for Scala Gatling tests
     gatling("com.github.phisgr:gatling-javapb:1.3.0")
@@ -44,11 +45,15 @@ protobuf {
         id("grpc") {
             artifact = "io.grpc:protoc-gen-grpc-java:1.53.0"
         }
+        id("javapgv") {
+            artifact = "build.buf.protoc-gen-validate:protoc-gen-validate:1.0.4"
+        }
     }
     generateProtoTasks {
         ofSourceSet("main").forEach {
             it.plugins {
                 id("grpc")
+                id("javapgv") { option("lang=java")}
             }
         }
     }
