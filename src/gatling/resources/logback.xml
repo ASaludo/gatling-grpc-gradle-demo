@@ -10,7 +10,7 @@
 
 	<logger name="com.github.phisgr.gatling.grpc" level="TRACE" />
 
-	<root level="WARN">
+	<root level="TRACE">
 		<appender-ref ref="CONSOLE" />
 	</root>
 
