@@ -1,16 +1,15 @@
 syntax = "proto3";
 
-package authzed.api.v2;
+package authzed.api.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/struct.proto";
 
 service PermissionsService {
   rpc CheckPermission (CheckPermissionRequest)
-    returns (CheckPermissionResponse);
+      returns (CheckPermissionResponse);
   rpc WriteRelationships (WriteRelationshipsRequest)
       returns (WriteRelationshipsResponse);
-
 }
 
 message ObjectReference {
@@ -27,6 +26,18 @@ message ZedToken {
   string token = 1;
 }
 
+message Consistency {
+
+  oneof requirement {
+    bool minimize_latency = 1;
+    ZedToken at_least_as_fresh = 2;
+    ZedToken at_exact_snapshot = 3;
+    bool fully_consistent = 4;
+  }
+
+
+}
+
 message CheckPermissionRequest {
   Consistency consistency = 1;
   ObjectReference resource = 2;
@@ -35,21 +46,14 @@ message CheckPermissionRequest {
   google.protobuf.Struct context = 5;
   bool with_tracing = 6;
 
-  message Consistency {
 
-    oneof requirement {
-      bool minimize_latency = 1;
-      ZedToken at_least_as_fresh = 2;
-      ZedToken at_exact_snapshot = 3;
-      bool fully_consistent = 4;
-    }
+}
 
-
-  }
-
-
-
-
+enum Permissionship {
+  PERMISSIONSHIP_UNSPECIFIED = 0;
+  PERMISSIONSHIP_NO_PERMISSION = 1;
+  PERMISSIONSHIP_HAS_PERMISSION = 2;
+  PERMISSIONSHIP_CONDITIONAL_PERMISSION = 3;
 }
 
 message CheckPermissionResponse {
@@ -58,12 +62,7 @@ message CheckPermissionResponse {
   PartialCaveatInfo partial_caveat_info = 3;
   DebugInformation debug_trace = 4;
 
-  enum Permissionship {
-    PERMISSIONSHIP_UNSPECIFIED = 0;
-    PERMISSIONSHIP_NO_PERMISSION = 1;
-    PERMISSIONSHIP_HAS_PERMISSION = 2;
-    PERMISSIONSHIP_CONDITIONAL_PERMISSION = 3;
-  }
+
 
   message PartialCaveatInfo {
     repeated string missing_required_context = 1;
@@ -123,63 +122,66 @@ message CheckPermissionResponse {
   }
 }
 
+message ContextualizedCaveat {
+  string caveat_name = 1;
+  google.protobuf.Struct context = 2;
+}
+
+message Relationship {
+  ObjectReference resource = 1;
+  string relation = 2;
+  SubjectReference subject = 3;
+  ContextualizedCaveat optional_caveat = 4;
+}
+
+message RelationshipUpdate {
+  Operation operation = 1;
+  Relationship relationship = 2;
+
+  enum Operation {
+    OPERATION_UNSPECIFIED = 0;
+    OPERATION_CREATE = 1;
+    OPERATION_TOUCH = 2;
+    OPERATION_DELETE = 3;
+  }
+}
+
+message RelationFilter {
+  string relation = 1;
+}
+
+message SubjectFilter {
+  string subject_type = 1;
+  string optional_subject_id = 2;
+  RelationFilter optional_relation = 3;
+
+
+}
+
+message RelationshipFilter {
+  string resource_type = 1;
+  string optional_resource_id = 2;
+  string optional_resource_id_prefix = 5;
+  string optional_relation = 3;
+  SubjectFilter optional_subject_filter = 4;
+
+
+}
+
+message Precondition {
+  Operation operation = 1;
+  RelationshipFilter filter = 2;
+
+  enum Operation {
+    OPERATION_UNSPECIFIED = 0;
+    OPERATION_MUST_NOT_MATCH = 1;
+    OPERATION_MUST_MATCH = 2;
+  }
+}
 
 message WriteRelationshipsRequest {
   repeated RelationshipUpdate updates = 1;
   repeated Precondition optional_preconditions = 2;
-
-  message RelationshipUpdate {
-    Operation operation = 1;
-    Relationship relationship = 2;
-
-    enum Operation {
-      OPERATION_UNSPECIFIED = 0;
-      OPERATION_CREATE = 1;
-      OPERATION_TOUCH = 2;
-      OPERATION_DELETE = 3;
-    }
-
-    message Relationship {
-      ObjectReference resource = 1;
-      string relation = 2;
-      SubjectReference subject = 3;
-      ContextualizedCaveat optional_caveat = 4;
-
-      message ContextualizedCaveat {
-        string caveat_name = 1;
-        google.protobuf.Struct context = 2;
-      }
-    }
-  }
-
-  message Precondition {
-    Operation operation = 1;
-    RelationshipFilter filter = 2;
-
-    enum Operation {
-      OPERATION_UNSPECIFIED = 0;
-      OPERATION_MUST_NOT_MATCH = 1;
-      OPERATION_MUST_MATCH = 2;
-    }
-
-    message RelationshipFilter {
-      string resource_type = 1;
-      string optional_resource_id = 2;
-      string optional_resource_id_prefix = 5;
-      string optional_relation = 3;
-      SubjectFilter optional_subject_filter = 4;
-
-      message SubjectFilter {
-        string subject_type = 1;
-        string optional_subject_id = 2;
-        RelationFilter optional_relation = 3;
-
-        message RelationFilter {
-          string relation = 1;
-        }
-      }
-    }
-  }
 }
 
 message WriteRelationshipsResponse {
